@@ -5,6 +5,79 @@
   var C = window.VITAMED || {};
   var TG = C.telegram || {};
   var SITE = C.site || 'Vita Med';
+  /* Корень сайта (работает и на vita-med.kz, и на превью в подпапке) */
+  var BASE = (function () {
+    var s = document.currentScript && document.currentScript.src;
+    return s ? s.replace(/lead-capture\.js.*$/, '') : '/';
+  })();
+
+  /* ---- Проверка номера: только реальные номера +7 (Казахстан / РФ) ---- */
+  function normPhone(v) {
+    var d = String(v || '').replace(/\D/g, '');
+    if (d.length === 11 && d.charAt(0) === '8') d = '7' + d.slice(1);
+    return d;
+  }
+  window.vitamedValidPhone = function (v) {
+    var d = normPhone(v);
+    if (!/^7[3-9]\d{9}$/.test(d)) return false;            /* +7 и 10 цифр, код 3xx–9xx */
+    var local = d.slice(1);
+    if (/^(\d)\1+$/.test(local)) return false;              /* 7777777777 */
+    if (/(\d)\1{6,}/.test(local)) return false;             /* 7 одинаковых подряд */
+    if (/0123456|1234567|2345678|3456789|9876543|8765432/.test(local)) return false;
+    return true;
+  };
+  window.vitamedFormatPhone = function (v) {
+    var d = normPhone(v);
+    if (d.length !== 11) return v;
+    return '+7 ' + d.slice(1, 4) + ' ' + d.slice(4, 7) + ' ' + d.slice(7, 9) + ' ' + d.slice(9, 11);
+  };
+
+  /* Маска ввода телефона для всех полей type=tel */
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (!el || el.type !== 'tel') return;
+    var raw = el.value;
+    var d = raw.replace(/\D/g, '');
+    if (!d) { el.value = ''; return; }
+    if (d.charAt(0) === '8') d = '7' + d.slice(1);
+    else if (raw.indexOf('+') === -1 && d.length === 10) d = '7' + d;   /* вставили 701 555 44 33 */
+    else if (d.charAt(0) !== '7') d = '7' + d;
+    d = d.slice(0, 11);
+    var out = '+7';
+    if (d.length > 1) out += ' ' + d.slice(1, 4);
+    if (d.length > 4) out += ' ' + d.slice(4, 7);
+    if (d.length > 7) out += ' ' + d.slice(7, 9);
+    if (d.length > 9) out += ' ' + d.slice(9, 11);
+    el.value = out;
+  }, true);
+  /* Поле телефона сразу начинается с «+7 » */
+  document.addEventListener('focusin', function (e) {
+    var el = e.target;
+    if (el && el.type === 'tel' && !el.value) el.value = '+7 ';
+  });
+  document.addEventListener('focusout', function (e) {
+    var el = e.target;
+    if (el && el.type === 'tel' && /^\+?7?\s*$/.test(el.value)) el.value = '';
+  });
+
+  /* ---- Единая обработка реальной заявки ----
+     1) копия в Telegram, 2) WhatsApp в новой вкладке,
+     3) текущая вкладка → /spasibo (там GTM засчитывает конверсию Google Ads).
+     Повторная заявка с тем же номером в этой сессии конверсию не дублирует. */
+  window.vitamedLead = function (f, waUrl) {
+    var phone = window.vitamedFormatPhone(f.phone);
+    f.phone = phone;
+    var key = 'vm_lead_' + normPhone(phone);
+    var dup = false;
+    try { dup = sessionStorage.getItem(key) === '1'; } catch (e) {}
+    if (!dup) window.vitamedSendLead(f);
+    try { sessionStorage.setItem(key, '1'); sessionStorage.setItem('vm_last_wa', waUrl); } catch (e) {}
+    window.open(waUrl, '_blank', 'noopener');
+    if (!dup) {
+      setTimeout(function () { location.href = BASE + 'spasibo/'; }, 150);
+    }
+    return !dup;
+  };
 
   /* ---- Отправка заявки боту (Cloudflare Worker → Telegram) ---- */
   window.vitamedSendLead = function (f) {
@@ -38,6 +111,7 @@
       '<div class="vm-ico">' + WA_SVG + '</div>' +
       '<h3 class="vm-h">Оставьте номер телефона</h3>' +
       '<p class="vm-p">Администратор перезвонит в течение 2 минут. После отправки откроется WhatsApp.</p>' +
+      '<p class="vm-err" hidden>Проверьте номер: нужен действующий номер в формате +7 7XX XXX XX XX</p>' +
       '<label class="field"><input type="text" name="vm-name" autocomplete="name" placeholder=" "><span>Ваше имя</span></label>' +
       '<label class="field"><input type="tel" name="vm-phone" inputmode="tel" autocomplete="tel" placeholder=" "><span>Телефон *</span></label>' +
       '<button class="btn btn-wa btn-lg btn-block vm-go" type="button">' + WA_SVG + '<span>Написать в WhatsApp</span></button>' +
@@ -53,7 +127,7 @@
   function openModal() { ov.classList.add('open'); document.body.style.overflow = 'hidden'; setTimeout(function () { phoneInput().focus(); }, 120); }
   function closeModal() { ov.classList.remove('open'); document.body.style.overflow = ''; }
 
-  function openWhatsApp(href, phone, name) {
+  function buildWa(href, phone, name) {
     var out = href;
     try {
       var u = new URL(href, location.href);
@@ -64,7 +138,7 @@
     } catch (e) {
       out = href + (href.indexOf('?') > -1 ? '&' : '?') + 'text=' + encodeURIComponent('Заявка. Телефон: ' + phone);
     }
-    window.open(out, '_blank', 'noopener');
+    return out;
   }
 
   /* ---- Перехват кликов по WhatsApp ---- */
@@ -83,11 +157,12 @@
     if (e.target.closest('.vm-go')) {
       var ph = phoneInput(), nm = nameInput();
       var phone = ph.value.trim(), name = nm.value.trim();
-      if (phone.replace(/\D/g, '').length < 10) { ph.classList.add('invalid'); ph.focus(); return; }
-      ph.classList.remove('invalid');
-      window.vitamedSendLead({ phone: phone, name: name, source: 'WhatsApp-кнопка' });
-      openWhatsApp(pendingHref || ('https://wa.me/' + (C.wa || '')), phone, name);
+      if (!window.vitamedValidPhone(phone)) { ph.classList.add('invalid'); ov.querySelector('.vm-err').hidden = false; ph.focus(); return; }
+      ph.classList.remove('invalid'); ov.querySelector('.vm-err').hidden = true;
+      phone = window.vitamedFormatPhone(phone);
       closeModal();
+      window.vitamedLead({ phone: phone, name: name, source: 'WhatsApp-кнопка' },
+        buildWa(pendingHref || ('https://wa.me/' + (C.wa || '')), phone, name));
       ph.value = ''; nm.value = '';
     }
   });

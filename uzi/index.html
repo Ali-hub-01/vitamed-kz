@@ -152,6 +152,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <form id="lead-form" novalidate>
         <label class="field"><input type="text" name="name" autocomplete="name" placeholder=" "><span>Ваше имя</span></label>
         <label class="field"><input type="tel" name="phone" inputmode="tel" autocomplete="tel" placeholder=" " required><span>Телефон *</span></label>
+        <p class="form-err" hidden>Проверьте номер: нужен действующий номер в формате +7 7XX XXX XX XX</p>
+        <label class="hp" aria-hidden="true">Сайт<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
         <label class="field"><select name="service"><option value="" hidden></option><option value="Терапевт">Терапевт</option><option value="Педиатр">Педиатр</option><option value="Невропатолог">Невропатолог</option><option value="Хирург">Хирург</option><option value="Капельница на дому">Капельница на дому</option><option value="Вывод из запоя">Вывод из запоя</option><option value="УЗИ на дому" selected>УЗИ на дому</option><option value="Психотерапевт">Психотерапевт</option><option value="Медсестра (уколы, капельницы)">Медсестра (уколы, капельницы)</option><option value="Другое">Другое</option></select><span>Услуга</span></label>
         <label class="field"><textarea name="comment" placeholder=" "></textarea><span>Комментарий (симптомы, адрес)</span></label>
         <button class="btn btn-green btn-lg btn-block" type="submit">Вызвать врача <svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>

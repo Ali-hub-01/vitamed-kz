@@ -221,16 +221,21 @@
       var service = form.elements.service.value;
       var comment = form.elements.comment.value.trim();
       var ph = form.elements.phone;
-      if (phone.replace(/\D/g, '').length < 10) { ph.classList.add('invalid'); ph.focus(); return; }
-      ph.classList.remove('invalid');
+      if (form.elements.website && form.elements.website.value) { form.closest('.form-card').classList.add('sent'); return; } /* бот */
+      var valid = window.vitamedValidPhone ? window.vitamedValidPhone(phone) : phone.replace(/\D/g, '').length >= 10;
+      var err = form.querySelector('.form-err');
+      if (!valid) { ph.classList.add('invalid'); if (err) err.hidden = false; ph.focus(); return; }
+      ph.classList.remove('invalid'); if (err) err.hidden = true;
+      if (window.vitamedFormatPhone) phone = window.vitamedFormatPhone(phone);
       var lines = ['Здравствуйте! Заявка с сайта Vita Med.'];
       if (name) lines.push('Имя: ' + name);
       lines.push('Телефон: ' + phone);
       if (service) lines.push('Услуга: ' + service);
       if (comment) lines.push('Комментарий: ' + comment);
-      if (window.vitamedSendLead) window.vitamedSendLead({ name: name, phone: phone, service: service, comment: comment, source: 'Форма на сайте' });
-      window.open('https://wa.me/' + WA + '?text=' + encodeURIComponent(lines.join('\n')), '_blank', 'noopener');
+      var waUrl = 'https://wa.me/' + WA + '?text=' + encodeURIComponent(lines.join('\n'));
       form.closest('.form-card').classList.add('sent');
+      if (window.vitamedLead) window.vitamedLead({ name: name, phone: phone, service: service, comment: comment, source: 'Форма на сайте' }, waUrl);
+      else window.open(waUrl, '_blank', 'noopener');
     });
     form.addEventListener('input', function (e) { if (e.target.classList.contains('invalid') && e.target.value.trim()) e.target.classList.remove('invalid'); });
     $$('.form-ok button', form.closest('.form-card')).forEach(function (b) { b.addEventListener('click', function () { form.closest('.form-card').classList.remove('sent'); form.reset(); }); });

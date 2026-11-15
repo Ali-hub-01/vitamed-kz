@@ -14,7 +14,7 @@ window.VITAMED = {
   /* Telegram-бот (через Cloudflare Worker). Пока пусто — заявки уходят
      только в WhatsApp. Заполните worker и secret, когда бот будет готов. */
   telegram: {
-    worker: '',
-    secret: ''
+    worker: 'https://vitamed-leadbot.alikanafin.workers.dev',
+    secret: '83d8224eebb0b4f2d8f226ffc28928f606e1689c1fe7871e'
   }
 };
