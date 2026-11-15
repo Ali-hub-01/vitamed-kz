@@ -720,3 +720,43 @@ section{position:relative}
 .thanks-back { margin-top: 22px; font-size: .92rem; }
 .thanks-back a { color: #176EC9; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .thanks-card, .thanks-steps li { animation: none; opacity: 1; } .thanks-check circle, .thanks-check path { stroke-dashoffset: 0; animation: none; } }
+
+/* ============================================================
+   Этапы с заполнением по прокрутке (.timeline и .steps)
+   JS задаёт --ls (начало линии), --le (длина), --p (0..1),
+   классы .on (этап достигнут), .cur (текущий), .done (всё пройдено)
+   ============================================================ */
+.timeline.prog::before, .timeline.prog::after { top: var(--ls, 20px); bottom: auto; height: var(--le, 0); z-index: 0; }
+.timeline.prog::after { transform: scaleY(var(--p, 0)); transition: transform .12s linear; }
+.timeline.prog .tl .dot { z-index: 2; background: #fff; border-color: var(--line-2); color: #9AA8B9; transition: background .45s, border-color .45s, color .45s, transform .45s var(--ease), box-shadow .45s; }
+.timeline.prog .tl.on .dot { border-color: var(--blue); color: var(--blue); transform: scale(1.06); }
+.timeline.prog .tl.cur .dot { background: var(--blue); color: #fff; box-shadow: 0 0 0 6px rgba(23,110,201,.15); transform: scale(1.14); }
+.timeline.prog .tl.cur .dot::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--blue); animation: tlPing 1.6s ease-out infinite; }
+.timeline.prog.done .tl:last-child .dot { background: var(--green); border-color: var(--green); color: #fff; box-shadow: 0 0 0 6px rgba(59,148,63,.15); }
+.timeline.prog .tl .box { opacity: .5; transform: translateX(10px); transition: opacity .5s, transform .5s var(--ease), border-color .5s, box-shadow .5s; }
+.timeline.prog .tl.on .box { opacity: 1; transform: none; }
+.timeline.prog .tl.cur .box { border-color: rgba(23,110,201,.45); box-shadow: 0 14px 34px -18px rgba(23,110,201,.55); }
+.timeline.prog .tl .box:hover { transform: translateX(6px); }
+@keyframes tlPing { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.7); opacity: 0; } }
+
+/* Блок «Как проходит вызов врача»: горизонтально на компьютере */
+.steps.prog.horiz::before, .steps.prog.horiz::after { left: var(--ls, 10%); right: auto; width: var(--le, 80%); }
+.steps.prog.horiz::after { transform: scaleX(var(--p, 0)); transition: transform .12s linear; }
+.steps.prog .step .n { z-index: 2; background: #fff; border-color: var(--line-2); color: #9AA8B9; box-shadow: none; transition: background .45s, border-color .45s, color .45s, transform .45s var(--ease), box-shadow .45s; transition-delay: 0s !important; }
+.steps.prog .step.on .n { border-color: var(--blue); color: var(--blue); box-shadow: 0 12px 24px -12px rgba(23,110,201,.6); }
+.steps.prog .step.cur .n { background: var(--blue); color: #fff; transform: scale(1.08); }
+.steps.prog.done .step:last-child .n { background: linear-gradient(135deg, var(--green-l), var(--green)); border-color: var(--green); color: #fff; }
+.steps.prog .step h3, .steps.prog .step p, .steps.prog .step .badge { opacity: .55; transition: opacity .5s; }
+.steps.prog .step.on h3, .steps.prog .step.on p, .steps.prog .step.on .badge { opacity: 1; }
+@media (max-width:980px) {
+  .steps.prog::before, .steps.prog::after { top: var(--ls, 34px); bottom: auto; height: var(--le, 0); left: 33px; width: 3px; }
+  .steps.prog::after { transform: scaleY(var(--p, 0)); transition: transform .12s linear; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timeline.prog .tl .box, .steps.prog .step h3, .steps.prog .step p { opacity: 1; transform: none; }
+  .timeline.prog .tl.cur .dot::after { animation: none; }
+}
+.checklist.in li:nth-child(2) .chk svg path{transition-delay:.45s}
+.checklist.in li:nth-child(3) .chk svg path{transition-delay:.7s}
+.checklist.in li:nth-child(4) .chk svg path{transition-delay:.95s}
+.checklist.in li:nth-child(5) .chk svg path{transition-delay:1.2s}

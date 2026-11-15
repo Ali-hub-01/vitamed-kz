@@ -57,7 +57,7 @@
   });
 
   /* ---- Reveal on scroll ---- */
-  var revealSel = '.reveal,.reveal-left,.reveal-scale,.stagger,.pop-in,.steps,.timeline,.checklist';
+  var revealSel = '.reveal,.reveal-left,.reveal-scale,.stagger,.pop-in,.checklist';
   var revealEls = $$(revealSel);
   if (reduce || !('IntersectionObserver' in window)) {
     revealEls.forEach(function (el) { el.classList.add('in'); });
@@ -69,6 +69,53 @@
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
     revealEls.forEach(function (el) { ro.observe(el); });
   }
+
+  /* ---- Этапы: линия и круги заполняются по мере прокрутки ---- */
+  (function () {
+    var tracks = $$('.timeline, .steps');
+    if (!tracks.length) return;
+    tracks.forEach(function (t) { t.classList.add('prog'); });
+    function markerOf(item) { return item.querySelector('.dot, .n'); }
+    function update() {
+      var vh = window.innerHeight;
+      tracks.forEach(function (t) {
+        var items = Array.prototype.slice.call(t.children).filter(function (c) { return c.matches('.tl, .step'); });
+        if (!items.length) return;
+        var rect = t.getBoundingClientRect();
+        var horiz = getComputedStyle(t).gridTemplateColumns.split(' ').length > 1;
+        var centers = items.map(function (it) {
+          var r = markerOf(it).getBoundingClientRect();
+          return horiz ? (r.left + r.width / 2 - rect.left) : (r.top + r.height / 2 - rect.top);
+        });
+        var start = centers[0], len = Math.max(1, centers[centers.length - 1] - start);
+        var p;
+        if (reduce) p = 1;
+        else if (horiz) p = (vh * 0.85 - rect.top) / (rect.height + vh * 0.35);
+        else p = (vh * 0.62 - (rect.top + start)) / len;
+        p = Math.max(0, Math.min(1, p));
+        t.classList.toggle('horiz', horiz);
+        t.style.setProperty('--ls', start + 'px');
+        t.style.setProperty('--le', len + 'px');
+        t.style.setProperty('--p', p.toFixed(4));
+        var raw = reduce ? Infinity : (horiz ? start + ((vh * 0.85 - rect.top) / (rect.height + vh * 0.35)) * len : vh * 0.62 - rect.top);
+        var pos = Math.min(start + p * len, raw), cur = -1;
+        items.forEach(function (it, i) {
+          var on = centers[i] <= pos + 2;
+          it.classList.toggle('on', on);
+          if (on) cur = i;
+        });
+        items.forEach(function (it, i) { it.classList.toggle('cur', i === cur && p < 1); });
+        t.classList.toggle('done', p >= 1);
+      });
+    }
+    var ticking = false;
+    function onScroll() { if (ticking) return; ticking = true; requestAnimationFrame(function () { ticking = false; update(); }); }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    window.addEventListener('load', update);
+    update();
+  })();
+
   var hero = $('.hero');
   if (hero) requestAnimationFrame(function () { setTimeout(function () { hero.classList.add('loaded'); }, 80); });
 
