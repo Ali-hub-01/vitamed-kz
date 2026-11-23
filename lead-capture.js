@@ -60,9 +60,45 @@
     if (el && el.type === 'tel' && /^\+?7?\s*$/.test(el.value)) el.value = '';
   });
 
+  /* ---- Google Ads: прямые теги (вместо GTM/GA4), аккаунты в config.js → googleAds ---- */
+  var ADS = (C.googleAds || []).filter(function (a) { return a && a.id; });
+  if (ADS.length) {
+    var gs = document.createElement('script');
+    gs.async = true;
+    gs.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(ADS[0].id);
+    document.head.appendChild(gs);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+    window.gtag('js', new Date());
+    ADS.forEach(function (a) { window.gtag('config', a.id); });
+  }
+  function adsConversion(kind) {
+    ADS.forEach(function (a) {
+      if (!a[kind]) return;
+      try { window.gtag('event', 'conversion', { send_to: a[kind], value: 1.0, currency: 'USD' }); } catch (e) {}
+    });
+  }
+
+  /* Заявка засчитывается только на /spasibo, только после реальной заявки в этой вкладке
+     и только один раз: прямой заход, обновление или возврат на /spasibo конверсию не дают. */
+  if (/\/spasibo\/?$/.test(location.pathname)) {
+    var pending = false;
+    try { pending = sessionStorage.getItem('vm_conv_pending') === '1'; } catch (e) {}
+    if (pending) {
+      adsConversion('lead');
+      try { sessionStorage.removeItem('vm_conv_pending'); } catch (e) {}
+    }
+  }
+
+  /* Клик по номеру телефона (любая ссылка tel:) — второстепенная конверсия */
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="tel:"]');
+    if (a) adsConversion('phone');
+  }, true);
+
   /* ---- Единая обработка реальной заявки ----
      1) копия в Telegram, 2) WhatsApp в новой вкладке,
-     3) текущая вкладка → /spasibo (там GTM засчитывает конверсию Google Ads).
+     3) текущая вкладка → /spasibo (там засчитывается конверсия Google Ads).
      Повторная заявка с тем же номером в этой сессии конверсию не дублирует. */
   window.vitamedLead = function (f, waUrl) {
     var phone = window.vitamedFormatPhone(f.phone);
@@ -71,7 +107,11 @@
     var dup = false;
     try { dup = sessionStorage.getItem(key) === '1'; } catch (e) {}
     if (!dup) window.vitamedSendLead(f);
-    try { sessionStorage.setItem(key, '1'); sessionStorage.setItem('vm_last_wa', waUrl); } catch (e) {}
+    try {
+      sessionStorage.setItem(key, '1');
+      sessionStorage.setItem('vm_last_wa', waUrl);
+      if (!dup) sessionStorage.setItem('vm_conv_pending', '1');
+    } catch (e) {}
     window.open(waUrl, '_blank', 'noopener');
     if (!dup) {
       setTimeout(function () { location.href = BASE + 'spasibo/'; }, 150);
