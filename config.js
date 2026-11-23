@@ -11,6 +11,17 @@ window.VITAMED = {
   phoneDisplay: '+7 776 224 9750',
   wa: '77762249750',
 
+  /* Google Ads — прямые конверсии (вместо GTM/GA4). Сайт один, аккаунтов два:
+     событие уходит в оба, каждый аккаунт засчитывает только клики своей рекламы.
+     lead  — реальная заявка (номер прошёл проверку → Telegram → /spasibo), основная;
+     phone — клик по номеру на сайте, второстепенная. Пустой список — теги не подключаются. */
+  googleAds: [
+    { name: 'Астана', id: 'AW-17708019906',
+      lead: 'AW-17708019906/n7dfCMqbk74dEMLh6_tB', phone: 'AW-17708019906/bqMKCM2bk74dEMLh6_tB' },
+    { name: 'Алматы', id: 'AW-17944643386',
+      lead: 'AW-17944643386/9t0wCLGdk74dELqO1uxC', phone: 'AW-17944643386/ZP31CLSdk74dELqO1uxC' }
+  ],
+
   /* Telegram-бот (через Cloudflare Worker). Пока пусто — заявки уходят
      только в WhatsApp. Заполните worker и secret, когда бот будет готов. */
   telegram: {
